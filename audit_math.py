@@ -79,6 +79,82 @@ p=dict(config['sharpened_proposals'][-1]);p['c']='1/24';assert not sharpened_val
 # Supremum check: with b<a, 2a+b<1 the rich gap forces c<gamma*b/4<(1/2)(1/3)/4=1/24.
 assert all(Q(p['gamma'])*Q(p['b'])/4<Q(1,24) for p in config['sharpened_proposals'])
 
+# Rank-split rich cover (rank-certificate-proof.md): the sharpened region with
+# the rich condition replaced by 5c<2*gamma*b. Certificates cost min(2rho,D)
+# log q (Lemmas A, B) and rank-rho progressions (2D-rho) log q (Lemma C).
+def rank_margins(p):
+    ms=sharpened_margins(p);del ms['rich_union_bound_gap']
+    g,b,c=(Q(p[k]) for k in ('gamma','b','c'))
+    ms['rank_split_rich_gap']=2*g*b/5-c
+    return ms
+def rank_valid(p):
+    ms=rank_margins(p)
+    return all(v>=0 if k=='nonregular_fraction_at_most_half' else v>0 for k,v in ms.items())
+kappa=lambda x:min(2*x,Q(1));nu=lambda x:2-x
+# kappa+nu is piecewise linear in x=rho/D, so its maximum is at a breakpoint.
+worst=max(kappa(x)+nu(x) for x in (Q(0),Q(1,2),Q(1)))
+assert worst==Q(5,2)==kappa(Q(1,2))+nu(Q(1,2))
+rank=[]
+for p in config['rank_certificate_proposals']:
+    assert rank_valid(p),p
+    g,b,c=(Q(p[k]) for k in ('gamma','b','c'))
+    mu=(g*b-worst*c)/2
+    for i in range(1001):
+        x=Q(i,1000);theta=(kappa(x)*c+g*b-nu(x)*c)/(2*b)
+        assert b*theta-kappa(x)*c>=mu>0 and b*(g-theta)-nu(x)*c>=mu
+    # Outside both earlier rich conditions: c>=gamma*b/4 here, and c>gamma*b/3
+    # (upstream PR #4), so the improvement is not a reparametrization.
+    assert c>=g*b/4 and c>g*b/3
+    rank.append({'name':p['name'],'factor_over_release':str(c/Q(config['baseline_c'])),
+                 'group_margin_mu':str(mu),'margins':{k:str(v) for k,v in rank_margins(p).items()}})
+# Rejection controls: b=a, b=1-2a, zero rank-split gap, gamma at the balance
+# bound, and the supremum 1/15.
+p=dict(config['rank_certificate_proposals'][-1]);p['b']=p['a'];assert not rank_valid(p)
+p=dict(config['rank_certificate_proposals'][-1]);p['b']=str(1-2*Q(p['a']));assert not rank_valid(p)
+p=dict(config['rank_certificate_proposals'][-1]);p['c']=str(2*Q(p['gamma'])*Q(p['b'])/5);assert not rank_valid(p)
+p=dict(config['rank_certificate_proposals'][-1]);p['gamma']=str((Q(1,2)-Q(p['eps']))*(1-Q(p['eps_reg']))*(1-Q(p['delta'])));assert not rank_valid(p)
+p=dict(config['rank_certificate_proposals'][-1]);p['c']='1/15';assert not rank_valid(p)
+assert all(2*Q(p['gamma'])*Q(p['b'])/5<Q(1,15) for p in config['rank_certificate_proposals'])
+
+# Symbolic identities (1)-(4) and Lemma A in dimension 3, with generic vectors.
+dot=lambda u,v:sum(i*j for i,j in zip(u,v))
+Y0,tv,be,dm,A0,Bv,Cv=(s.symbols(n+'0:3') for n in ('Y','t','beta','dm','A','B','C'))
+ca,sa,s0,sv,qs,jv,j1,j2=s.symbols('c_a sigma_a sigma_0 s q j j_1 j_2')
+w=dot(be,be);W=qs**2*w
+Ya=[Y0[i]+ca*(tv[i]+be[i])-dm[i] for i in range(3)]
+za=qs**2*(2*dot(Ya,be)+sa*w);z0=qs**2*(2*dot(Y0,be)+s0*w)
+Lam=(qs**2*dot(Y0,Y0)+2*ca*qs**2*dot(Y0,tv)-(ca**2+ca*sa)*W-2*qs**2*dot(Y0,dm)
+     +qs**2*(ca**2*dot(tv,tv)+dot(dm,dm)-2*ca*dot(tv,dm)))
+Yj=[Ya[i]+sv*be[i] for i in range(3)]
+assert s.expand(qs**2*dot(Ya,Ya)-Lam-ca*za)==0                       # Lemma A
+assert s.expand(qs**2*dot(Yj,Yj)-qs**2*dot(Ya,Ya)-sv*(sv-sa)*W-sv*za)==0  # (2)
+assert s.expand(dot(dm,be)-ca*(dot(tv,be)+w)-(sa-s0)*w/2-(z0-za)/(2*qs**2))==0  # (4)
+fj=lambda j:qs**2*dot([A0[i]+Cv[i]+j*Bv[i] for i in range(3)],[A0[i]+Cv[i]+j*Bv[i] for i in range(3)])
+eta=(fj(j2)-fj(j1))/(j2-j1)
+assert s.simplify(fj(jv)-qs**2*dot([A0[i]+Cv[i] for i in range(3)],[A0[i]+Cv[i] for i in range(3)])
+                  -jv*(jv-j1-j2)*qs**2*dot(Bv,Bv)-jv*eta)==0             # (3)
+
+# Lemma C on exact instances: beta_i=sum_{l<i} e_l q^{l-i} is the centered
+# representative of n'/q^i, and N1=<Dm,(e_{i-1})> is the integer nearest X/q
+# whenever |X-q^2<Dm,beta>|<3, with |Dm_i|<=h+1 and 32D(k+2)<k^2.
+import random
+rng=random.Random(2026);digit_cases=0
+def centered(x):
+    x-=x.numerator//x.denominator
+    return x-1 if x>=Q(1,2) else x
+while digit_cases<2000:
+    qq=rng.choice((1009,10007,100003));D=rng.randint(2,6);k=rng.randint(8,80);h=rng.randint(1,k-1)
+    if 32*D*(k+2)>=k*k:continue
+    lim=int(2*qq/(k*k));e=[rng.randint(-lim,lim) for _ in range(D)]
+    npr=sum(e[l]*qq**l for l in range(D))
+    beta=[sum(Q(e[l],qq**(i+1-l)) for l in range(i+1)) for i in range(D)]
+    if any(abs(x)>Q(2,k*k) for x in beta):continue
+    assert all(beta[i]==centered(Q(npr,qq**(i+1))) for i in range(D))
+    dmv=[rng.randint(-(h+1),h+1) for _ in range(D)]
+    X=qq*qq*dot(dmv,beta)+Q(rng.randint(-2999,2999),1000)
+    assert round(X/qq)==dot(dmv,e)
+    digit_cases+=1
+
 # Independent finite tests of the exact half-open norm-band lemma. The proof
 # is analytic; these tests include unit-distance equality and t=0 cases.
 points=[Q(i,4) for i in range(-20,21)];band_cases=0
@@ -108,7 +184,9 @@ for a in range(1,101):
 
 out={'scope':'Exact algebra and finite checks only; not an independent formal proof of upstream results',
      'parameter_certificates':checks,'sharpened_parameter_certificates':sharpened,
-     'negative_controls_rejected':8,
+     'rank_certificate_parameter_certificates':rank,
+     'rank_split':{'worst_cost_sum':str(worst),'worst_rank_fraction':'1/2','coefficient_supremum':'1/15','digit_test_cases':digit_cases},
+     'negative_controls_rejected':13,
      'half_open_band_test_cases':band_cases,'profile_exact_test_cases':tripling_cases,
      'symbolic_identities':'passed'}
 (ROOT/'experiments'/'exact-audit.json').write_text(json.dumps(out,indent=2))

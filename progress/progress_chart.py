@@ -47,12 +47,13 @@ for series in data['series']:
             marker=MARKERS[key], markersize=8, color=COLORS[key],
             markeredgecolor=SURFACE, markeredgewidth=1.5, zorder=4)
 
-# Selective direct labels: first OpenAI point, first and last repository points.
+# Selective direct labels: the OpenAI point and every repository point.
 openai = data['series'][0]['points'][0]
 repo = data['series'][1]['points']
 for point, dx, dy, ha in ((openai, 0.5, 1.9, 'left'),
                           (repo[0], -0.6, 0.6, 'right'),
                           (repo[1], -0.3, 0.22, 'right'),
+                          (repo[2], -0.6, 0.45, 'right'),
                           (repo[-1], -0.5, 1.9, 'right')):
     t, c = parse(point)
     ax.annotate(point['label'], (t, c),
@@ -80,7 +81,7 @@ fig.text(0.07, 0.95, 'Coefficient $c$ in $W_r(k) > k^{\\,c\\,k\\lfloor\\log_2 r\
 fig.text(0.07, 0.895, 'Log scale. Repository values are conditional on the upstream OpenAI lemmas and '
          'not independently reviewed.\nBefore Sept 23, 2026 no bound of this form was known (c = 0).',
          fontsize=8.5, color=INK2, va='top', linespacing=1.4)
-fig.text(0.97, 0.02, 'Latest repository value is 4000× the OpenAI coefficient (and 7.7× the previous 1/193)',
+fig.text(0.97, 0.02, 'Latest repository value is 6250× the OpenAI coefficient (and 1.5625× the previous 1/25)',
          fontsize=9, color=INK, ha='right', va='bottom')
 ax.legend(loc='upper left', frameon=False, fontsize=9, labelcolor=INK)
 ax.yaxis.set_minor_locator(matplotlib.ticker.NullLocator())

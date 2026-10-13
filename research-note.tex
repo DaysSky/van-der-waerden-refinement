@@ -16,8 +16,10 @@ multiplication exponent using only its stated profile inequalities.
 The former admits the coefficient $c=1/200$ in the manuscript's own
 parameter region, and, after sharpening the balance demanded of the
 outer coloring and shortening the dilation, every $c<1/24$ with the
-explicit choice $c=1/25$, versus the manuscript's $10^{-5}$, subject to
-the upstream geometric and counting arguments.
+explicit choice $c=1/25$. A rank-split cover of rich events, building on
+an unmerged upstream repeated-key argument, then admits every $c<1/15$
+with the explicit choice $c=1/16$, versus the manuscript's $10^{-5}$, subject
+to the upstream geometric and counting arguments.
 The latter is a limitation of the abstract inequalities, not a lower bound
 on the actual matrix multiplication exponent. These are research drafts:
 neither literature priority nor independent formal verification is claimed.
@@ -301,6 +303,78 @@ exactly $4000$. These are verified by \texttt{audit\_math.py} together
 with rejection controls at $b=a$, $b=1-2a$, zero rich exponent, the
 exact balance bound, and $c=1/24$. The threshold is not explicit and
 may be very large; no finite coloring or runtime gain is claimed.
+
+\section{A rank-split cover of rich events}\label{sec:rank}
+In Proposition~\ref{prop:sharpened} the condition $2c<\gamma b/2$ comes
+from a union bound over all $q^{2D}$ progressions in which a repeated key
+contributes one flip. The unmerged upstream proposal
+\href{https://github.com/rohanarun/van-der-waerden-refinement/pull/4}{pull request~\#4 of the upstream repository}
+(pinned at \texttt{4b4e80e}) shows the following facts about any
+progression with a repeated key:
+\begin{itemize}
+ \item it has a box-return period $h$ with $y(d)=t/h+B$ and $|B_i|\le2H/h$;
+ \item the residue classes modulo $h$ that contain repeated keys
+       (\emph{collision classes}) are affine;
+ \item their repeated keys can be certified with entropy about $q^D$.
+\end{itemize}
+This gives $c<\gamma b/3$. We credit those facts to that proposal.
+
+\noindent\texttt{rank-certificate-proof.md} restates them with proofs and
+adds a split by the rank of the collision classes' carry vectors.
+
+Write $Y_j=A+j(t+\beta)/h-m_j$ with $\beta=hB$ and integer carries $m_j$.
+Let $\Sigma$ be the set of collision classes, $a_0=\min\Sigma$, and
+\[
+ \rho=\operatorname{rank}\{m_a-m_{a_0}:a\in\Sigma\}\in\{0,\dots,D\}.
+\]
+A repeated key at class positions $s_1<s_2$ forces the vertex constraint
+$\zeta_a=q^2(2\langle Y_a,\beta\rangle+(s_1+s_2)|\beta|^2)\in(-1,1)$.
+\begin{lemma}\label{lem:rank-counts}
+With $o(\cdot)$ uniform in $\rho$:
+\begin{enumerate}
+ \item[(A)] the literal key sets carried by collision classes number at most
+ $q^{2\rho}e^{o(k\log k)}$, and also at most $q^De^{o(k\log k)}$;
+ \item[(C)] the progressions of rank $\rho$ number at most
+ $q^{2D-\rho}e^{o(k\log k)}$.
+\end{enumerate}
+\end{lemma}
+\begin{proof}[Outline]
+(A) The vertex constraints eliminate $\langle Y_{a_0},\beta\rangle$ and
+$\langle m_a-m_{a_0},\beta\rangle$. Every band in a collision class
+becomes an affine function of $3+\rho$ real parameters plus
+$(c_a+s)\zeta_a$, with no dependence on the start point. A two-level
+hyperplane-arrangement count, with one bounded scalar per class, gives
+$q^{2\rho}e^{o(k\log k)}$. The anchored count follows from identity~(16)
+of the upstream proposal, applied to all positions of a collision class.
+
+(C) Writing $\beta_i=\sum_{l<i}e_lq^{l-i}$ with $|e_l|\le2Hq+2H$, the
+difference of two vertex constraints fixes
+$\sum_i(m_a-m_{a_0})_i\,e_{i-1}$ exactly. These are $\rho$ independent
+integer forms in the digits that determine the step.
+\end{proof}
+\begin{proposition}\label{prop:rank}
+Replace the last inequality of Proposition~\ref{prop:sharpened} by
+$5c<2\gamma b$. Then, conditional on the same imported arguments,
+$W_r(k)>k^{ck\lfloor\log_2r\rfloor}$ for all sufficiently large $k$ and every
+integer $r\ge2$, with a threshold independent of $r$. Every fixed $c<1/15$
+is admitted.
+\end{proposition}
+\begin{proof}
+Fix $\rho$, put $\kappa=\min(2\rho,D)/D$ and $\nu=(2D-\rho)/D$, so that
+$\kappa+\nu\le5/2$. Choose $\theta$ with $\kappa c<b\theta$ and
+$\nu c<b(\gamma-\theta)$. If at least $\theta k$ flipped keys lie in
+collision classes, use the certificates of Lemma~\ref{lem:rank-counts}(A).
+Otherwise more than $(\gamma-\theta)k$ distinct keys must flip; use the
+count~(C). Both sums are $o(1)$, uniformly over the $D+1$ ranks. The
+affine estimate, the outer dichotomy, and the digit product are unchanged.
+Finally $c<2\gamma b/5<(2/5)(1/2)(1/3)=1/15$.
+\end{proof}
+The choice of Section~\ref{sec:sharpened} with $c=1/16$ has margin
+$2\gamma b/5-c=857/500000$, and coefficient ratio $6250$ to $10^{-5}$.
+\texttt{audit\_math.py} checks the margins, the worst rank $\rho=D/2$,
+the identities, and $2{,}000$ exact digit-pinning instances. It rejects
+five boundary controls, including $c=1/15$. As before, no finite coloring
+or runtime gain is claimed.
 
 \section{An obstruction for the matrix profile inequalities}
 The matrix paper defines a symmetric positive profile $P(a,b)$ with
